@@ -14,6 +14,7 @@ e = convert(Float64, ElementaryCharge / 1u"C") # naboj iontu
 z0 = 2.25e-3  # vzdalenost axialnich elektrod od stredu pasti [m]
 r0 = 0.6167e-3 # vzdalenost radialnich elektrod od stredu pasti [m]
 κ = 0.0597
+charge_mass_ratio = e/m
 
 # parametry pasti
 Vrf = 400  # napeti radialnich elektrod [V]
@@ -29,17 +30,16 @@ Udc = 1300  # napeti axialnich elektrod [V]
 function ion_motion!(du, u, p, t)
     # funkce pocita zmeny souradnic u podle pohybove rovnice, je treba 6 rovnic prvniho radu
     # u = [vx, vy, vz, x, y, z]
-    Vrf, Udc, Ω, z0, r0, κ, m, e = p # parametry vypoctu
-    charge_mass_ratio = e/m
-    c_x = (-κ*Udc/z0^2 - Vrf/r0^2 * cos(Ω*t) ) # konstanta pro vypocet E_x
-    c_y = (-κ*Udc/z0^2 + Vrf/r0^2 * cos(Ω*t) ) # konstanta pro vypocet E_y
-    c_z = 2*κ*Udc/z0^2 # konstanta pro vypocet E_z
+    Vrf, Udc, Ω, z0, r0, κ, m, e, charge_mass_ratio = p # parametry vypoctu
+
+    c_x = (κ*Udc/z0^2 + Vrf/r0^2 * cos(Ω*t) ) # konstanta pro vypocet E_x
+    c_y = (κ*Udc/z0^2 - Vrf/r0^2 * cos(Ω*t) ) # konstanta pro vypocet E_y
+    c_z = -2*κ*Udc/z0^2 # konstanta pro vypocet E_z
 
     du[1] = charge_mass_ratio * c_x*u[4] # dvx
     du[2] = charge_mass_ratio * c_y*u[5] # dvy
-    du[3] = charge_mass_ratio * c_x*u[6] # dvz
+    du[3] = charge_mass_ratio * c_z*u[6] # dvz
 
-    println(u[3])
 
     du[4] = u[1] # dx
     du[5] = u[2] # dy
@@ -47,16 +47,15 @@ function ion_motion!(du, u, p, t)
 end
 
 # pocatecni podminky
-u0 = [0, 0, 0, 0,0,1e-2] # v metrech
+u0 = [0, 0, 0, 1e-6,1e-6,1e-6] # v metrech
 
-p = [Vrf, Udc, Ω, z0, r0, κ, m, e] # parametry ODE
+p = [Vrf, Udc, Ω, z0, r0, κ, m, e, charge_mass_ratio] # parametry ODE
 
-tspan = (0.0, 1.0e-7)  # casovy rozsah reseni
+tspan = (0.0, 1.0e-6)  # casovy rozsah reseni
 prob = ODEProblem(ion_motion!, u0, tspan, p) # definice problemu pro ODE solver
 
-sol = solve(prob, Tsit5()) # reseni ODEProblem
-println(sol)
+sol = solve(prob, reltol=1e-8, abstol=1e-8) # reseni ODEProblem
 
 # plot
 gr()
-plot(sol)
+plot(sol, vars=(4,6))
