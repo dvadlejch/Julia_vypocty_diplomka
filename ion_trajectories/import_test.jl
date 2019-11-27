@@ -18,5 +18,5 @@ tspan = (0.0, 1.0e-6)  # casovy rozsah reseni
 
 traj = get_ion_traj(Vrf, Udc, Ω, E_ext, u0, tspan) # trajektorie iontu
 
-pyplot()
+gr()
 plot(traj, vars=(4,6))
