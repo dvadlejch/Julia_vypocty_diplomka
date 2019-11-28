@@ -5,15 +5,17 @@
 using PhysicalConstants.CODATA2018
 using Unitful
 
-function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, phi, tspan; div=false)
+function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=false, sym_type=false)
     # funkce vraci matici rychlosti a poloh iontu [vx,vy,vz,x,y,z] pro dane casy
     # input: E_ext - externi DC pole, phi - poc. faze trajektorii, tspan - casovy vektor
+    # input: delta_phi - fazovy rozdil protejsich elektrod [dphi_x, dphi_y]
     # konstanty
     m = 40 * convert(Float64,AtomicMassConstant / (1u"kg")) # hmotnost iontu
     e = convert(Float64, ElementaryCharge / 1u"C") # naboj iontu
     z0 = 2.25e-3  # vzdalenost axialnich elektrod od stredu pasti [m]
     r0 = 0.6167e-3 # vzdalenost radialnich elektrod od stredu pasti [m]
     κ = 0.0597
+    α = 0.75 # dipol. koef. protejsich elektrod
 
     # parametry mathieovy rovnice
     a_x = -4* e*κ*Udc / (m*z0^2 * Ω^2)
@@ -30,8 +32,32 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, phi, tspan; div=false)
     ω = 1/2 * Ω * sqrt.(a + 1/2 * q.^2)
     u0 = sqrt.(2*BoltzmannConstant/(u"J*K^-1")*T./(m*ω.^2)) # amplitudy sekularniho pohybu
     us = e./(m*ω.^2) .* E_ext
+    # fazovy rozdil protejsich elektrod
+    #delta_phi_au = copy(delta_phi)
+    #push!(delta_phi_au, 0)
+
+    # debugg
 
     if div
+        print("div = true")
+        if sym_type
+            print("div = true & sym_type = true")
+        else
+            print("div = true & sym_type = false")
+        end
+
+    else
+        print("div = false")
+        if sym_type
+            print("div = false & sym_type = true")
+        else
+            print("div = false & sym_type = false")
+        end
+    end
+
+
+    if div
+
         # funkce vracejici polohu a rychlost sec. poh, IMM, EMM
         u_sec(t) = u0.*cos.(ω*t + phi) + us # sekularni pohyb
         u_IMM(t) = u0.*cos.(ω*t + phi) .* q/2 .* cos(Ω*t) # IMM - pozor na rozdeleni IMM a EMM pro velka us
@@ -41,18 +67,39 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, phi, tspan; div=false)
             sin(Ω*t)*u0.*q.*cos.(ω*t + phi)
         vu_EMM(t) = - 1/2*Ω*sin(Ω*t)*q.*us
 
+        if sym_type
+            u_phase(t) =  1/8*r0*α*sin(Ω*t)*q.*delta_phi_au .* [-1,0,0] +
+                1/8*r0*α*sin(Ω*t)*q.*delta_phi_au .* [0,1,0]
+
+            vu_phase(t) = 1/8*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [-1,0,0] +
+                1/8*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [0,1,0]
+
+        else
+            println("########byl jsem tu")
+            u_phase(t) = 1/4 * r0 * α * sin(Ω*t)*q.*delta_phi_au .* [0,1,0]
+
+            vu_phase(t) = 1/4*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [0,1,0]
+
+            println("------pred")
+            println(1/4 * r0 * α * sin(Ω*0)*q.*delta_phi_au .* [0,1,0])
+            println("-----za")
+        end
+
         # reseni
         u_sec_an = u_sec.(tspan)
         u_IMM_an = u_IMM.(tspan)
         u_EMM_an = u_EMM.(tspan)
+        u_EMM_phase_an = u_phase.(tspan)
         vu_sec_an = vu_sec.(tspan)
         vu_IMM_an = vu_IMM.(tspan)
         vu_EMM_an = vu_EMM.(tspan)
+        vu_EMM_phase_an = vu_phase.(tspan)
 
         # finalni usporadani matic u_sec, u_IMM, u_EMM
         u_sec_return = zeros(length(tspan), 6)
         u_IMM_return = zeros(length(tspan), 6)
         u_EMM_return = zeros(length(tspan), 6)
+        u_EMM_phase_return = zeros(length(tspan), 6)
 
         #println(1/4 *m* u0[1]^2 * 1/8 * q[1]^2*Ω^2 / ElementaryCharge)
         #println(4/m *( e * q[1]*E_ext[1]/( (2*a[1] + q[1]^2)*Ω) )^2 / ElementaryCharge )
@@ -66,17 +113,35 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, phi, tspan; div=false)
                 u_IMM_return[i, j+3] = u_IMM_an[i][j]
                 u_EMM_return[i, j] = vu_EMM_an[i][j]
                 u_EMM_return[i, j+3] = u_EMM_an[i][j]
+                u_EMM_phase_return[i, j] = vu_EMM_phase_an[i][j]
+                u_EMM_phase_return[i, j+3] = u_EMM_phase_an[i][j]
             end
         end
 
-        return (u_sec_return, u_IMM_return, u_EMM_return, 2*pi./ω) # plus vraci vektor sekularnich period
+        return (u_sec_return, u_IMM_return, u_EMM_return, u_EMM_phase_return, 2*pi./ω) # plus vraci vektor sekularnich period
 
 
     else
+
         # funkce vracejici polohu a rychlost v case t
-        u(t) = (us + u0.*cos.(ω*t + phi)) .* (1 .+ q/2 .* cos(Ω*t))
-        vu(t) = -u0.*ω.*sin.(ω*t + phi) - 1/2*cos(Ω*t)*q.*ω.*u0.*sin.(ω*t+phi) - 1/2*Ω*
-            sin(Ω*t)*u0.*q.*cos.(ω*t + phi) - 1/2*Ω*sin(Ω*t)*q.*us
+        if sym_type
+            u(t) = (us + u0.*cos.(ω*t + phi)) .* (1 .+ q/2 .* cos(Ω*t)) +
+                1/8*r0*α*sin(Ω*t)*q.*delta_phi_au .* [-1,0,0] + 1/8*r0*α*sin(Ω*t)*
+                q.*delta_phi_au .* [0,1,0]
+
+            vu(t) = -u0.*ω.*sin.(ω*t + phi) - 1/2*cos(Ω*t)*q.*ω.*u0.*sin.(ω*t+phi) -
+                1/2*Ω*sin(Ω*t)*u0.*q.*cos.(ω*t + phi) - 1/2*Ω*sin(Ω*t)*q.*us + 1/8*
+                r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [-1,0,0] + 1/8*r0*α*Ω*cos(Ω*t)*
+                q.*delta_phi_au .* [0,1,0]
+
+        else
+            u(t) = (us + u0.*cos.(ω*t + phi)) .* (1 .+ q/2 .* cos(Ω*t)) +
+                1/4 * r0*α*sin(Ω*t)*q.*delta_phi_au .* [0,1,0]
+
+            vu(t) = -u0.*ω.*sin.(ω*t + phi) - 1/2*cos(Ω*t)*q.*ω.*u0.*sin.(ω*t+phi) -
+                1/2*Ω*sin(Ω*t)*u0.*q.*cos.(ω*t + phi) - 1/2*Ω*sin(Ω*t)*q.*us +
+                1/4*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [0,1,0]
+        end
 
         # analiticke reseni
         u_an = u.(tspan)
