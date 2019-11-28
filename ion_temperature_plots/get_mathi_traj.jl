@@ -5,10 +5,9 @@
 using PhysicalConstants.CODATA2018
 using Unitful
 
-function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, phi, tspan, div=false)
+function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, phi, tspan; div=false)
     # funkce vraci matici rychlosti a poloh iontu [vx,vy,vz,x,y,z] pro dane casy
     # input: E_ext - externi DC pole, phi - poc. faze trajektorii, tspan - casovy vektor
-
     # konstanty
     m = 40 * convert(Float64,AtomicMassConstant / (1u"kg")) # hmotnost iontu
     e = convert(Float64, ElementaryCharge / 1u"C") # naboj iontu
@@ -43,7 +42,35 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, phi, tspan, div=false)
         vu_EMM(t) = - 1/2*Ω*sin(Ω*t)*q.*us
 
         # reseni
-        
+        u_sec_an = u_sec.(tspan)
+        u_IMM_an = u_IMM.(tspan)
+        u_EMM_an = u_EMM.(tspan)
+        vu_sec_an = vu_sec.(tspan)
+        vu_IMM_an = vu_IMM.(tspan)
+        vu_EMM_an = vu_EMM.(tspan)
+
+        # finalni usporadani matic u_sec, u_IMM, u_EMM
+        u_sec_return = zeros(length(tspan), 6)
+        u_IMM_return = zeros(length(tspan), 6)
+        u_EMM_return = zeros(length(tspan), 6)
+
+        #println(1/4 *m* u0[1]^2 * 1/8 * q[1]^2*Ω^2 / ElementaryCharge)
+        #println(4/m *( e * q[1]*E_ext[1]/( (2*a[1] + q[1]^2)*Ω) )^2 / ElementaryCharge )
+        #println("T = ", 2*pi/ω[1])
+
+        for i in 1:length(tspan)
+            for j in 1:3
+                u_sec_return[i, j] = vu_sec_an[i][j]
+                u_sec_return[i, j+3] = u_sec_an[i][j]
+                u_IMM_return[i, j] = vu_IMM_an[i][j]
+                u_IMM_return[i, j+3] = u_IMM_an[i][j]
+                u_EMM_return[i, j] = vu_EMM_an[i][j]
+                u_EMM_return[i, j+3] = u_EMM_an[i][j]
+            end
+        end
+
+        return (u_sec_return, u_IMM_return, u_EMM_return, 2*pi./ω) # plus vraci vektor sekularnich period
+
 
     else
         # funkce vracejici polohu a rychlost v case t
@@ -65,7 +92,7 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, phi, tspan, div=false)
             end
         end
 
-        return u_return
+        return (u_return, 2*pi./ω) # plus vraci vektor sekularnich period
     end
 
 end
@@ -75,5 +102,7 @@ function get_E_kin_1D(u::Array{Float64,1})
     # konstanty
     m = 40 * convert(Float64,AtomicMassConstant / (1u"kg")) # hmotnost iontu
     e = convert(Float64, ElementaryCharge / 1u"C")
-    return 1/2 * m * (u.^2) / e
+    E_kin = 1/2 * m * (u.^2)
+    T_kin = 2*E_kin / convert(Float64, BoltzmannConstant/(1u"J*K^-1") )
+    return [E_kin / e, T_kin]
 end

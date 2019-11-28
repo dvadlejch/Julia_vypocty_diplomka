@@ -4,24 +4,41 @@ using Plots
 using PhysicalConstants.CODATA2018
 using Unitful
 using Statistics
+using LaTeXStrings
+
 include("get_mathi_traj.jl")
 
 # parametry pasti
-Vrf = 350  # napeti radialnich elektrod [V]
+Vrf = 500  # napeti radialnich elektrod [V]
 Udc = 1300  # napeti axialnich elektrod [V]
 Ω = 2*pi * 30e6 # budici frekvence pasti [Hz]
 
-T = 5e-3 # teplota iontu
-E_ext = [0,0,100]
-phi = [0,0,0]
+T = 0.5e-3 # teplota iontu
+E_ext = [0,0,0]
+phi = [pi/2,0,0]
 
-tspan = range(0, 1e-5, length=401)
+# casovy rozsah
+#tspan = range(0, 0.995e-5, length=401)
+tspan = range(0, 6.145235e-7, length=601)
+# analyticke reseni
+(u_sec, u_IMM, u_EMM, Per_sec) = get_mathi_traj(Vrf, Udc, Ω, T, E_ext, phi, tspan, div=true)
+u = u_sec + u_IMM + u_EMM # celkovy pohyb iontu
 
-u = get_mathi_traj(Vrf, Udc, Ω, T, E_ext, phi, tspan)
-vz = u[:,3]
-E_kin_z = get_E_kin_1D(vz)
-T_kin_z = convert(Float64, ElementaryCharge/(1u"C")) * E_kin_z / convert(Float64, BoltzmannConstant/(1u"J*K^-1") )
+(E_kin_sec, T_kin_sec) = get_E_kin_1D(u_sec[:,1])
+(E_kin_IMM, T_kin_IMM) = get_E_kin_1D(u_IMM[:,1])
+(E_kin_EMM, T_kin_EMM) = get_E_kin_1D(u_EMM[:,1])
 
-gr()
-plot(tspan, T_kin_z)
-hline!([mean(T_kin_z)])
+
+
+pyplot()
+#gr()
+plot(tspan/Per_sec[1], T_kin_sec * 1e3, label="sekulární", dpi=200)
+plot!(tspan/Per_sec[1], T_kin_IMM * 1e3, label="IMM")
+xlabel!(L"$ t/T_{\rm{sec}} $")
+ylabel!(L" \rm{Teplota \,\,[mK]}")
+#plot!(tspan, T_kin_EMM)
+hline!( [mean(T_kin_sec)*1e3] , linestyle=:dash, label=L"$ \left< T_{\rm{sec}} \right> $")
+hline!([ mean(T_kin_IMM)*1e3], linestyle=:dash, label=L"$ \left< T_{\rm{IMM}} \right> $")
+
+#savefig("D:\\Onedrive_vut\\ÚPT\\diplomka\\Julia_vypocty_diplomka\\ion_temperature_plots\\temp_vs_t_sec_IMM.pdf")
+savefig("/home/dan/diplomka_winfiles/Julia_vypocty_diplomka/ion_temperature_plots/temp_vs_t_sec_IMM.pdf")
