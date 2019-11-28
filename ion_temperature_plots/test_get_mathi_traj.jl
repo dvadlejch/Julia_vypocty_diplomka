@@ -22,7 +22,8 @@ phi = [pi/2,0,0]
 #tspan = range(0, 0.995e-5, length=401)
 tspan = range(0, 6.145235e-7, length=601)
 # analyticke reseni
-(u_sec, u_IMM, u_EMM,u_EMM_phase, Per_sec) = get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi, phi, tspan, div=true, sym_type=false)
+(u_sec, u_IMM, u_EMM,u_EMM_phase, Per_sec) = get_mathi_traj(Vrf, Udc, Ω, T, E_ext,
+    delta_phi, phi, tspan, div=true, sym_type=true)
 
 u = u_sec + u_IMM + u_EMM # celkovy pohyb iontu
 

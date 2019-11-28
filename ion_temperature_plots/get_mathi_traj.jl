@@ -37,7 +37,7 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
     #push!(delta_phi_au, 0)
 
     # debugg
-
+    #=
     if div
         print("div = true")
         if sym_type
@@ -54,10 +54,9 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
             print("div = false & sym_type = false")
         end
     end
-
+    =#
 
     if div
-
         # funkce vracejici polohu a rychlost sec. poh, IMM, EMM
         u_sec(t) = u0.*cos.(ω*t + phi) + us # sekularni pohyb
         u_IMM(t) = u0.*cos.(ω*t + phi) .* q/2 .* cos(Ω*t) # IMM - pozor na rozdeleni IMM a EMM pro velka us
@@ -74,26 +73,27 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
             vu_phase(t) = 1/8*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [-1,0,0] +
                 1/8*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [0,1,0]
 
+            u_EMM_phase_an = u_phase.(tspan)
+            vu_EMM_phase_an = vu_phase.(tspan)
+
         else
-            println("########byl jsem tu")
-            u_phase(t) = 1/4 * r0 * α * sin(Ω*t)*q.*delta_phi_au .* [0,1,0]
+            u_phase1(t) = 1/4 * r0 * α * sin(Ω*t)*q.*delta_phi_au .* [0,1,0]
 
-            vu_phase(t) = 1/4*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [0,1,0]
+            vu_phase1(t) = 1/4*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [0,1,0]
 
-            println("------pred")
-            println(1/4 * r0 * α * sin(Ω*0)*q.*delta_phi_au .* [0,1,0])
-            println("-----za")
+            u_EMM_phase_an = u_phase1.(tspan)
+            vu_EMM_phase_an = vu_phase1.(tspan)
+
         end
 
         # reseni
         u_sec_an = u_sec.(tspan)
         u_IMM_an = u_IMM.(tspan)
         u_EMM_an = u_EMM.(tspan)
-        u_EMM_phase_an = u_phase.(tspan)
         vu_sec_an = vu_sec.(tspan)
         vu_IMM_an = vu_IMM.(tspan)
         vu_EMM_an = vu_EMM.(tspan)
-        vu_EMM_phase_an = vu_phase.(tspan)
+
 
         # finalni usporadani matic u_sec, u_IMM, u_EMM
         u_sec_return = zeros(length(tspan), 6)
@@ -125,6 +125,7 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
 
         # funkce vracejici polohu a rychlost v case t
         if sym_type
+
             u(t) = (us + u0.*cos.(ω*t + phi)) .* (1 .+ q/2 .* cos(Ω*t)) +
                 1/8*r0*α*sin(Ω*t)*q.*delta_phi_au .* [-1,0,0] + 1/8*r0*α*sin(Ω*t)*
                 q.*delta_phi_au .* [0,1,0]
@@ -134,18 +135,21 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
                 r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [-1,0,0] + 1/8*r0*α*Ω*cos(Ω*t)*
                 q.*delta_phi_au .* [0,1,0]
 
+            u_an = u.(tspan)
+            vu_an = vu.(tspan)
         else
-            u(t) = (us + u0.*cos.(ω*t + phi)) .* (1 .+ q/2 .* cos(Ω*t)) +
+            u1(t) = (us + u0.*cos.(ω*t + phi)) .* (1 .+ q/2 .* cos(Ω*t)) +
                 1/4 * r0*α*sin(Ω*t)*q.*delta_phi_au .* [0,1,0]
 
-            vu(t) = -u0.*ω.*sin.(ω*t + phi) - 1/2*cos(Ω*t)*q.*ω.*u0.*sin.(ω*t+phi) -
+            vu1(t) = -u0.*ω.*sin.(ω*t + phi) - 1/2*cos(Ω*t)*q.*ω.*u0.*sin.(ω*t+phi) -
                 1/2*Ω*sin(Ω*t)*u0.*q.*cos.(ω*t + phi) - 1/2*Ω*sin(Ω*t)*q.*us +
                 1/4*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [0,1,0]
+
+            u_an = u1.(tspan)
+            vu_an = vu1.(tspan)
         end
 
-        # analiticke reseni
-        u_an = u.(tspan)
-        vu_an = vu.(tspan)
+
 
         # finalni usporadani matice u
         u_return = zeros(length(tspan), 6)
