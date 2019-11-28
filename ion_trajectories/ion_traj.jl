@@ -37,5 +37,5 @@ function get_ion_traj(Vrf, Udc, Ω, E_ext, u0, tspan)
     p = [Vrf, Udc, Ω, z0, r0, κ, m, e, charge_mass_ratio, E_ext] # parametry ODE
 
     prob = ODEProblem(ion_motion!, u0, tspan, p) # definice problemu pro ODE solver
-    return solve(prob, reltol=1e-8, abstol=1e-8) # reseni ODEProblem
+    return solve(prob, reltol=1e-9, abstol=1e-9) # reseni ODEProblem
 end
