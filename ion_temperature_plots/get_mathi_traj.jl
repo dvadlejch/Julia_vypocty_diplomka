@@ -73,8 +73,15 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
             vu_phase(t) = 1/8*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [-1,0,0] +
                 1/8*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [0,1,0]
 
+
             u_EMM_phase_an = u_phase.(tspan)
             vu_EMM_phase_an = vu_phase.(tspan)
+
+            # vypocet stredni hodnoty energie v jednotlivych osach
+            avg_E_kin_an = [1/4*m / e * u0.^2 .* ω.^2,
+                1/4*  1/8 * Ω^2 / e *m* u0.^2 .* q.^2,
+                4/m *( e * q.*E_ext./( (2*a .+ q.^2)*Ω) ).^2 / e,
+                1/256 * m *(α*r0 *Ω* q.*delta_phi_au).^2 / e .* [1,1,0] ]
 
         else
             u_phase1(t) = 1/4 * r0 * α * sin(Ω*t)*q.*delta_phi_au .* [0,1,0]
@@ -84,6 +91,10 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
             u_EMM_phase_an = u_phase1.(tspan)
             vu_EMM_phase_an = vu_phase1.(tspan)
 
+            avg_E_kin_an = [1/4*m / e * u0.^2 .* ω.^2,
+                1/4*  1/8 * Ω^2 / e *m* u0.^2 .* q.^2,
+                4/m *( e * q.*E_ext./( (2*a .+ q.^2)*Ω) ).^2 / e,
+                1/64 * m *(α*r0 *Ω* q.*delta_phi_au).^2 / e .* [0,1,0]]
         end
 
         # reseni
@@ -104,6 +115,10 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
         #println(1/4 *m* u0[1]^2 * 1/8 * q[1]^2*Ω^2 / ElementaryCharge)
         #println(4/m *( e * q[1]*E_ext[1]/( (2*a[1] + q[1]^2)*Ω) )^2 / ElementaryCharge )
         #println("T = ", 2*pi/ω[1])
+        #println(1/64 * m *(α*r0 *Ω* q[2].*delta_phi_au[2])^2 / e  )
+        #println(1/256 * m *(α*r0 *Ω* q[2].*delta_phi_au[2])^2 / e  )
+
+
 
         for i in 1:length(tspan)
             for j in 1:3
@@ -118,8 +133,8 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
             end
         end
 
-        return (u_sec_return, u_IMM_return, u_EMM_return, u_EMM_phase_return, 2*pi./ω) # plus vraci vektor sekularnich period
-
+        return (u_sec_return, u_IMM_return, u_EMM_return, u_EMM_phase_return, 2*pi./ω, avg_E_kin_an) # plus vraci vektor sekularnich period
+        # plus vraci vektor vektoru prumerne energie [ [vektor sekularnich E_avg], [IMM], [EMM dc], [EMM phase] ]
 
     else
 
@@ -137,6 +152,12 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
 
             u_an = u.(tspan)
             vu_an = vu.(tspan)
+
+            # analyticky vypocet prumerne energie
+            avg_E_kin_an = 1/4*m / e * u0.^2 .* ω.^2+
+                1/4*  1/8 * Ω^2 / e *m* u0.^2 .* q.^2+
+                4/m *( e * q.*E_ext./( (2*a .+ q.^2)*Ω) ).^2 / e+
+                1/256 * m *(α*r0 *Ω* q.*delta_phi_au).^2 / e .* [1,1,0]
         else
             u1(t) = (us + u0.*cos.(ω*t + phi)) .* (1 .+ q/2 .* cos(Ω*t)) +
                 1/4 * r0*α*sin(Ω*t)*q.*delta_phi_au .* [0,1,0]
@@ -147,6 +168,12 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
 
             u_an = u1.(tspan)
             vu_an = vu1.(tspan)
+
+            # analyticky vypocet prumerne energie
+            avg_E_kin_an = 1/4*m / e * u0.^2 .* ω.^2+
+                1/4*  1/8 * Ω^2 / e *m* u0.^2 .* q.^2+
+                4/m *( e * q.*E_ext./( (2*a .+ q.^2)*Ω) ).^2 / e+
+                1/64 * m *(α*r0 *Ω* q.*delta_phi_au).^2 / e .* [0,1,0]
         end
 
 
@@ -161,7 +188,8 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
             end
         end
 
-        return (u_return, 2*pi./ω) # plus vraci vektor sekularnich period
+        return (u_return, 2*pi./ω, avg_E_kin_an) # plus vraci vektor sekularnich period
+        # plus vraci vektor prumerne energie [E_kin_avg_x, E_kin_avg_y, E_kin_avg_z]
     end
 
 end

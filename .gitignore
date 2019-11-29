@@ -24,3 +24,6 @@ docs/site/
 Manifest.toml
 *.pdf
 *.svg
+*.pdf
+ion_temperature_plots/temp_vs_t_EMM_EMMphase.svg
+*.pdf
