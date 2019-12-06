@@ -68,10 +68,10 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
 
         if sym_type
             u_phase(t) =  1/8*r0*α*sin(Ω*t)*q.*delta_phi_au .* [-1,0,0] +
-                1/8*r0*α*sin(Ω*t)*q.*delta_phi_au .* [0,1,0]
+                1/8*r0*α*sin(Ω*t)*q.*delta_phi_au .* [0,-1,0]
 
             vu_phase(t) = 1/8*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [-1,0,0] +
-                1/8*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [0,1,0]
+                1/8*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [0,-1,0]
 
 
             u_EMM_phase_an = u_phase.(tspan)
@@ -84,9 +84,9 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
                 1/256 * m *(α*r0 *Ω* q.*delta_phi_au).^2 / e .* [1,1,0] ]
 
         else
-            u_phase1(t) = 1/4 * r0 * α * sin(Ω*t)*q.*delta_phi_au .* [0,1,0]
+            u_phase1(t) = 1/4 * r0 * α * sin(Ω*t)*q.*delta_phi_au .* [0,-1,0]
 
-            vu_phase1(t) = 1/4*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [0,1,0]
+            vu_phase1(t) = 1/4*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [0,-1,0]
 
             u_EMM_phase_an = u_phase1.(tspan)
             vu_EMM_phase_an = vu_phase1.(tspan)
@@ -143,12 +143,12 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
 
             u(t) = (us + u0.*cos.(ω*t + phi)) .* (1 .+ q/2 .* cos(Ω*t)) +
                 1/8*r0*α*sin(Ω*t)*q.*delta_phi_au .* [-1,0,0] + 1/8*r0*α*sin(Ω*t)*
-                q.*delta_phi_au .* [0,1,0]
+                q.*delta_phi_au .* [0,-1,0]
 
             vu(t) = -u0.*ω.*sin.(ω*t + phi) - 1/2*cos(Ω*t)*q.*ω.*u0.*sin.(ω*t+phi) -
                 1/2*Ω*sin(Ω*t)*u0.*q.*cos.(ω*t + phi) - 1/2*Ω*sin(Ω*t)*q.*us + 1/8*
                 r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [-1,0,0] + 1/8*r0*α*Ω*cos(Ω*t)*
-                q.*delta_phi_au .* [0,1,0]
+                q.*delta_phi_au .* [0,-1,0]
 
             u_an = u.(tspan)
             vu_an = vu.(tspan)
@@ -160,11 +160,11 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
                 1/256 * m *(α*r0 *Ω* q.*delta_phi_au).^2 / e .* [1,1,0]
         else
             u1(t) = (us + u0.*cos.(ω*t + phi)) .* (1 .+ q/2 .* cos(Ω*t)) +
-                1/4 * r0*α*sin(Ω*t)*q.*delta_phi_au .* [0,1,0]
+                1/4 * r0*α*sin(Ω*t)*q.*delta_phi_au .* [0,-1,0]
 
             vu1(t) = -u0.*ω.*sin.(ω*t + phi) - 1/2*cos(Ω*t)*q.*ω.*u0.*sin.(ω*t+phi) -
                 1/2*Ω*sin(Ω*t)*u0.*q.*cos.(ω*t + phi) - 1/2*Ω*sin(Ω*t)*q.*us +
-                1/4*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [0,1,0]
+                1/4*r0*α*Ω*cos(Ω*t)*q.*delta_phi_au .* [0,-1,0]
 
             u_an = u1.(tspan)
             vu_an = vu1.(tspan)

@@ -1,4 +1,5 @@
 # funkce vracejici trajektorii iontu v kvadrupolovem priblizeni
+# zapocitan je i vliv externiho statickeho pole E_ext a fazoveho rozdilu mezi protejsimi radialnimi elektrodami
 using DifferentialEquations
 using PhysicalConstants.CODATA2018
 using Unitful
