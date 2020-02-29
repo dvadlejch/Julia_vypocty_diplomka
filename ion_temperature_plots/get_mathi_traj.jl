@@ -22,12 +22,14 @@ function get_mathi_traj(Vrf, Udc, Ω, T, E_ext, delta_phi_au, phi, tspan; div=fa
     a_y = a_x
     a_z = - 2 * a_x
     a = [a_x, a_y, a_z]
+    #print("a=",a)
 
     q_x = -2* e*Vrf / (m*r0^2 * Ω^2)
     q_y = -q_x
     q_z = 0
     q = [q_x, q_y, q_z]
-
+    #print("\nq^2=",q.^2)
+    
     # amplituda sekul. pohybu
     ω = 1/2 * Ω * sqrt.(a + 1/2 * q.^2)
     u0 = sqrt.(2*BoltzmannConstant/(u"J*K^-1")*T./(m*ω.^2)) # amplitudy sekularniho pohybu
