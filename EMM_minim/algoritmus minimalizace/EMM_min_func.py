@@ -149,7 +149,16 @@ def get_hist_fit(fotkor, voltages, t_res, t_measure, background_photocounts, his
         except:
             pass
 
-    return( DeltaS_S_ratio, Delta_S_S_ratio_sigma, fot_phi, fot_phi_sigma, x, Omega, Omega_sigma, nu )
+    return( DeltaS_S_ratio, Delta_S_S_ratio_sigma, fot_phi, fot_phi_sigma, x, Omega, Omega_sigma, nu, t_scale )
+## fce vracejici hodnoty pro vykresleni fitu histogramu
+def get_hist_fit_values(t_scale, x, Omega):
+    # input: casova osa histogramu, x=[S_0, DeltaS_S, fot_phi], Omega
+    def fit_func(x, Omega, time_points):
+        return x[0]*( 1 + x[1] * np.cos(Omega * time_points + x[2]) )
+
+    time_fit = np.linspace(0, t_scale.max(), 200)
+    fotkor_fit = fit_func(x, Omega, time_fit)
+    return(time_fit, fotkor_fit)
 
 ## fce vracejici koeficienty fitu zavislosti deltaS_S_ratio na \nu, prusecik s nulou, interval napeti pro dalsi iteraci
 def get_DeltaS_S_nu_fit(DeltaS_S_ratio, nu, U_avg=500, iter_coef=0.25):
