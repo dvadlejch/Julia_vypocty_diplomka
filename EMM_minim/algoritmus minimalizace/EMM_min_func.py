@@ -183,7 +183,7 @@ def get_DeltaS_S_nu_fit(DeltaS_S_ratio, nu, U_avg=500, iter_coef=0.25):
     DeltaS_S_fit_nu = MM_line(linfit, nu_fit)
 
     return( U_5, U_6, min_interv, linfit, nu_fit, DeltaS_S_fit_nu )
-
+##
 def get_DeltaS_S_xz_fit(DeltaS_S_ratio, fot_phi, U_komp_x, DeltaS_S_min_z, fot_phi_min_z, gamma, iter_coef=0.25):
     # input: modulace, napeti na kompenzacni el., iteracni koef.
     # pouze pro dva body
@@ -233,3 +233,75 @@ def get_DeltaS_S_xz_fit(DeltaS_S_ratio, fot_phi, U_komp_x, DeltaS_S_min_z, fot_p
     DeltaS_S_fit = MM_line(linfit, U_komp_x_fit)
 
     return( U_komp_x_interval, linfit, U_komp_x_fit, DeltaS_S_fit, DeltaS_S_ratio_xz_teor, fot_phi_xz_teor )
+##
+def get_DeltaS_S_xy_fit(DeltaS_S_ratio, fot_phi, U_komp_y, DeltaS_S_min_z,
+                        DeltaS_S_min_xz, fot_phi_min_z, fot_phi_min_xz, gamma, epsilon, iter_coef=0.25):
+    # input: modulace, napeti na kompenzacni el., iteracni koef.
+    # pouze pro dva body
+    # funkce vraci napeti pro dalsi iteraci, fit
+
+    def MM_resid(x, deltaS_S, nu):
+        return (deltaS_S - x[0] - x[1] * nu)
+
+    def MM_line(x, nu):
+        return (x[0] + x[1] * nu)
+
+    x0 = [0.06, +0.1]
+
+
+    fit = least_squares(MM_resid, x0, args=(DeltaS_S_ratio, U_komp_y),
+                        ftol=1e-10, xtol=1e-10)
+    linfit = fit.x
+
+    # ----- hledani bodu s odpovidajici pozadovanou hodnotou modulace  a faze
+    # gamma = 45 / 180 * np.pi  # uhel mezi smerem z a svazkem Sxz
+    DeltaS_S_ratio_xy_teor_complex = np.sin(epsilon)/np.sin(gamma) * ( DeltaS_S_min_xz*np.exp(1j*fot_phi_min_xz) -
+                                                                       DeltaS_S_min_z*np.cos(gamma)*np.exp(1j*fot_phi_min_z))
+    DeltaS_S_ratio_xy_teor = np.abs(DeltaS_S_ratio_xy_teor_complex)
+    fot_phi_xy_teor = np.angle(DeltaS_S_ratio_xy_teor_complex)
+
+    U_komp_y_mozne_res = np.array(
+        [(DeltaS_S_ratio_xy_teor - linfit[0]) / linfit[1], (-DeltaS_S_ratio_xy_teor - linfit[0]) / linfit[1]])
+
+    sign_of_points_res = np.sign(MM_line(linfit, U_komp_y_mozne_res))
+    sign_of_data_points = np.sign(MM_line(linfit, U_komp_y))  # zde jsem zjistil, na ktere strane se nachazi hledany bod
+
+    # ---- obema moznym resenim priradim komplexni cisla podle toho, na ktere strane od nuly jsou
+    # pak spocitam rozdil mezi timto prirazenym uhlem a pozadovanym uhlem a vyberu z moznych reseni nejlepsi schodu
+
+    phase_dif = np.abs(
+        np.angle(sign_of_data_points * sign_of_points_res * np.exp(1j *( np.array(fot_phi) - fot_phi_xy_teor) )) )
+
+    # rozdil fazi mezi moznym resenim a pozadovanou fazi
+    U_komp_y_res = U_komp_y_mozne_res[np.argmin(phase_dif)]
+
+    # vyberu interval, pro dalsi iteraci
+    U_komp_y_interval = [U_komp_y_res - np.abs(U_komp_y_res - U_komp_y).min() * iter_coef,
+                         U_komp_y_res + np.abs(U_komp_y_res - U_komp_y).min() * iter_coef]
+
+    # fit ke vraceni
+    U_komp_y_fit = np.linspace(min(U_komp_y_mozne_res) - np.abs(U_komp_y - U_komp_y_res).max(),
+                               max(U_komp_y_mozne_res) + np.abs(U_komp_y - U_komp_y_res).max(), 200)
+    DeltaS_S_fit = MM_line(linfit, U_komp_y_fit)
+
+    return( U_komp_y_interval, linfit, U_komp_y_fit, DeltaS_S_fit, DeltaS_S_ratio_xy_teor, fot_phi_xy_teor )
+
+## funkce vracejici bety v ortogonalni bazi xyz
+# muze byt dosazeno i DeltaS_S
+def get_beta_xyz_phi_xyz(variables):
+    # input: beta = [beta_z, beta_xz, beta_xy]  variables = [beta, fot_phi, gamma, epsilon]
+    #       fot_phi = [phi_z, phi_xz, phi_xy]
+
+    # output: beta_xyz = [beta_x, beta_y, beta_z]
+    beta = variables[:3]
+    fot_phi = variables[3:6]
+    gamma = variables[6]
+    epsilon = variables[7]
+
+    beta_x_comp = 1 / np.sin(gamma) * (
+                beta[1] * np.exp(1j * fot_phi[1]) - beta[0] * np.cos(gamma) * np.exp(1j * fot_phi[0]))
+    beta_y_comp = 1 / np.cos(epsilon) * (np.sin(epsilon) * beta_x_comp - beta[2] * np.exp(1j * fot_phi[2]))
+
+    return (np.array([np.abs(beta_x_comp), np.abs(beta_y_comp)]),
+            np.array([np.angle(beta_x_comp), np.angle(beta_y_comp)])
+            )
