@@ -450,3 +450,139 @@ def get_hist_fit_single(fotkor, t_res, t_measure, background_photocounts, hist_s
 #             pass
 
     return( DeltaS_S_ratio, Delta_S_S_ratio_sigma )
+##
+
+def get_hist_fit_single_photocountssum(fotkor, t_res, t_measure, background_photocounts, hist_sigma, max_phi_unc = 0.3, phi0 = 1.1, 
+                 voltages=np.array([[1,1], [1,1]])):
+    # function returns DeltaS_S_ratio, Delta_S_S_ratio_sigma, fot_phi, fot_phi_sigma, hist_sigma
+
+    nu = (voltages[:,0] - voltages[:,1]) / (voltages[:,0] + voltages[:,1])
+    # pomocne promene
+    fotkor_shape = np.shape(fotkor)
+    # casova skala foton-kor. dat
+    t_scale = np.array(range(0, fotkor_shape[0])) * t_res
+    
+    # ----- odecet pozadi
+    bg_ph_sum = background_photocounts * t_measure  # celkovy pocet fotonu pozadi za cas mereni
+    last_bin_ratio = fotkor[fotkor_shape[0] - 2] / fotkor[fotkor_shape[0] - 3]  # pomer mezi county v poslednim/predposlednim binu
+    bg_ph_per_bin = bg_ph_sum / (fotkor_shape[0] - 2 + last_bin_ratio)
+
+    fotkor[:fotkor_shape[0] - 2] = fotkor[:fotkor_shape[0] - 2] - bg_ph_per_bin
+    fotkor[fotkor_shape[0] - 2] = fotkor[fotkor_shape[0] - 2] - bg_ph_per_bin * last_bin_ratio
+    #-----------------------------
+    photon_sum = np.sum(fotkor, axis=0)
+    
+    #------- odhad RF frekvence i s nejistotou
+    # odhad periody triggeru
+    T_trig = (fotkor[fotkor_shape[0] - 2] / fotkor[fotkor_shape[0] - 3]) * t_res + t_scale[fotkor_shape[0] - 2]
+
+    T_trig_sigma = t_res
+    # frekvence buzeni pasti
+
+    drive_freq = 1 / T_trig
+    drive_freq_sigma = 1 / T_trig ** 2 * T_trig_sigma
+    Omega = 2 * np.pi * drive_freq 
+    Omega_sigma = 2 * np.pi * drive_freq_sigma
+
+    ####### definice fce, ktera vraci likehood, pomoci ktereho budu fitovat
+
+    def likehood_transform(x, Omega, S, time_step, sigma):
+        # definuju funkci vracejici logaritmus pravdepodobnosti, ze z distrubuce dane sinusovkou, co fituji vyberu pozorovane body
+        # predpokladam, ze kazdy bod je normalne rozdelen kolem sinusovky
+
+        len_S = len(S)
+        # print(len_S)
+        S_fit = x[0] * (1 + x[1] * np.cos(Omega * time_step * np.arange(0, len_S) + x[2]))
+
+        sum_term = ((S - S_fit) / sigma) ** 2
+        log_term = np.log(np.ones(len_S) * sigma * np.sqrt(2 * np.pi))
+
+        return (0.5 * np.sum(sum_term) + np.sum(log_term))  # vraci -log( likehood)
+
+    def likehood_transform_jac(x, Omega, S, time_step, sigma):
+        # vektor jacob. likehood fce
+        len_S = len(S)
+        sum_term0 = 2 / sigma ** 2 * (1 + x[1] * np.cos(Omega * time_step * np.arange(0, len_S) + x[2])) * (
+                    x[0] * x[1] * np.cos(Omega * time_step * np.arange(0, len_S) + x[2]) + x[0] - S)
+
+        sum_term1 = 2 / sigma ** 2 * x[0] * np.cos(Omega * time_step * np.arange(0, len_S) + x[2]) * (
+                    x[0] * x[1] * np.cos(Omega * time_step * np.arange(0, len_S) + x[2]) + x[0] - S)
+
+        sum_term2 = (-2 / sigma ** 2) * x[0] * x[1] * (
+                    x[0] * x[1] * np.cos(Omega * time_step * np.arange(0, len_S) + x[2]) + x[0] - S) * np.sin(
+            Omega * time_step * np.arange(0, len_S) + x[2])
+
+        return (0.5 * np.array([np.sum(sum_term0), np.sum(sum_term1), np.sum(sum_term2)]))
+    ############## fitovani
+
+    # cyklus fitujici vsechny foton-korelacni data
+
+#     x = np.zeros((3, fotkor_shape[1]))
+#     DeltaS_S_ratio = []
+#     sigmas = np.zeros((3, fotkor_shape[1]))
+#     Delta_S_S_ratio_sigma = []
+#     fot_phi = []
+#     fot_phi_sigma = []
+
+
+
+    
+
+        ##############------------- cast kodu maximalizujici likehood
+        # -----
+        # podminky urcujici prijimuti reseni
+        # max_phi_unc = 0.3
+        # phi0 = 1.1
+
+        # --- zde budu zkouset postupne ruzne pocatecni body tak, aby minimalizace vybrala globalni minimum
+    x0 = [fotkor[:fotkor_shape[0] - 2].mean(), 0.5 * (fotkor[:fotkor_shape[0] - 2].max() - fotkor[:fotkor_shape[0] - 2].min()) /
+          fotkor[:fotkor_shape[0] - 2].mean(), phi0]
+        #     x0 = [fotkor[:fotkor_shape[0]-2,i].mean(), 0.5* ( fotkor[:fotkor_shape[0]-2,i].max()
+        #         -fotkor[:fotkor_shape[0]-2,i].min() )/fotkor[:fotkor_shape[0]-2,i].mean(), phi0, 100]
+        #     fit = minimize(likehood_transform, x0, args=(Omega, fotkor[:fotkor_shape[0]-2,i], t_res, hist_sigma[i] ), tol=1e-10 )
+    fit = minimize(likehood_transform, x0, args=(Omega, fotkor[:fotkor_shape[0] - 2], t_res, hist_sigma),tol=1e-10,
+                   jac=likehood_transform_jac)
+        #     fit = minimize(likehood_transform_sigma, x0, args=(Omega, fotkor[:fotkor_shape[0]-2,i], t_res), tol=1e-10)
+        #     print(fit)
+        #     print('\n')
+    if (np.sqrt(fit.hess_inv[2, 2]) > max_phi_unc) or (fit.x[1] < 0):
+        x0 = [fotkor[:fotkor_shape[0] - 2].mean(), 0.5 * (fotkor[:fotkor_shape[0] - 2].max() - fotkor[:fotkor_shape[0] - 2].min()) 
+              /fotkor[:fotkor_shape[0] - 2].mean(), - phi0]
+    
+            #         x0 = [fotkor[:fotkor_shape[0]-2,i].mean(), 0.5* ( fotkor[:fotkor_shape[0]-2,i].max()
+            #             -fotkor[:fotkor_shape[0]-2,i].min() )/fotkor[:fotkor_shape[0]-2,i].mean(), -phi0, 100]
+        fit = minimize(likehood_transform, x0, args=(Omega, fotkor[:fotkor_shape[0] - 2], t_res, hist_sigma), tol=1e-10,
+                       jac=likehood_transform_jac)
+        #         fit = minimize(likehood_transform_sigma, x0, args=(Omega, fotkor[:fotkor_shape[0]-2,i], t_res), tol=1e-10)
+        #         print(fit)
+        #         print('\n')
+
+        # ---- odhad nejistot parametru----
+        #     C = fit.hess_inv  # variancni-kovariancni matice
+    C = fit.hess_inv
+        # -------------------------------
+    x = fit.x
+    sigmas = np.sqrt(np.diagonal(C))
+    DeltaS_S_ratio = x[1]
+
+        # ---- faze fot-kor signalu
+    fot_phi = np.angle(DeltaS_S_ratio * np.exp(1j * x[2]))
+
+        # ---- sigma delta s ku s
+    Delta_S_S_ratio_sigma = np.sqrt(C[1, 1])
+
+        # ---- sigma fot_phi
+    fot_phi_sigma = np.sqrt(C[2, 2])
+
+    # S_0 = x[0, :]  # parametry S_0
+    # DeltaS = x[1, :] * S_0  # delta S
+#     DeltaS_S_ratio = np.array(DeltaS_S_ratio)
+    # doplneni zamenek, pokud skoci faze fotkor signalu o vice nez pi/2
+#     if sign_DeltaS:
+#         signchange_ind = np.argwhere(np.abs( np.angle( np.exp(1j*np.array(fot_phi) ) * np.exp(-1j * fot_phi[0]) ) )> np.pi/2)
+#         try:
+#             DeltaS_S_ratio[signchange_ind] = - DeltaS_S_ratio[signchange_ind]
+#         except:
+#             pass
+
+    return( DeltaS_S_ratio, Delta_S_S_ratio_sigma, photon_sum )
