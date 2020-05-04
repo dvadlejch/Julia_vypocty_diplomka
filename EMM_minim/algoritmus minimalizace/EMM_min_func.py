@@ -21,13 +21,24 @@ def get_hist_fit(fotkor, voltages, t_res, t_measure, background_photocounts, his
     # casova skala foton-kor. dat
     t_scale = np.array(range(0, fotkor_shape[0])) * t_res
 
-    # ----- odecet pozadi
-    bg_ph_sum = background_photocounts * t_measure  # celkovy pocet fotonu pozadi za cas mereni
-    last_bin_ratio = fotkor[fotkor_shape[0] - 2, :] / fotkor[fotkor_shape[0] - 3, :]  # pomer mezi county v poslednim/predposlednim binu
-    bg_ph_per_bin = bg_ph_sum / (fotkor_shape[0] - 2 + last_bin_ratio)
+#     # ----- odecet pozadi
+#     bg_ph_sum = background_photocounts * t_measure  # celkovy pocet fotonu pozadi za cas mereni
+#     last_bin_ratio = fotkor[fotkor_shape[0] - 2, :] / fotkor[fotkor_shape[0] - 3, :]  # pomer mezi county v poslednim/predposlednim binu
+#     bg_ph_per_bin = bg_ph_sum / (fotkor_shape[0] - 2 + last_bin_ratio)
 
-    fotkor[:fotkor_shape[0] - 2, :] = fotkor[:fotkor_shape[0] - 2, :] - bg_ph_per_bin
-    fotkor[fotkor_shape[0] - 2, :] = fotkor[fotkor_shape[0] - 2, :] - bg_ph_per_bin * last_bin_ratio
+#     fotkor[:fotkor_shape[0] - 2, :] = fotkor[:fotkor_shape[0] - 2, :] - bg_ph_per_bin
+#     fotkor[fotkor_shape[0] - 2, :] = fotkor[fotkor_shape[0] - 2, :] - bg_ph_per_bin * last_bin_ratio
+#     #-----------------------------
+
+    #----- pro vice ruznych casu mereni a pozadi
+    # ----- odecet pozadi
+    for i in range(fotkor_shape[1]):
+        bg_ph_sum = background_photocounts[i] * t_measure[i]  # celkovy pocet fotonu pozadi za cas mereni
+        last_bin_ratio = fotkor[fotkor_shape[0] - 2, i] / fotkor[fotkor_shape[0] - 3, i]  # pomer mezi county v poslednim/predposlednim binu
+        bg_ph_per_bin = bg_ph_sum / (fotkor_shape[0] - 2 + last_bin_ratio)
+
+        fotkor[:fotkor_shape[0] - 2, i] = fotkor[:fotkor_shape[0] - 2, i] - bg_ph_per_bin
+        fotkor[fotkor_shape[0] - 2, i] = fotkor[fotkor_shape[0] - 2, i] - bg_ph_per_bin * last_bin_ratio
     #-----------------------------
 
     #------- odhad RF frekvence i s nejistotou
