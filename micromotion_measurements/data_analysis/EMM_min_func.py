@@ -452,7 +452,7 @@ def get_hist_fit_single(fotkor, t_res, t_measure, background_photocounts, hist_s
     return( DeltaS_S_ratio, Delta_S_S_ratio_sigma )
 ##
 
-def get_hist_fit_single_photocountssum(fotkor, t_res, t_measure, background_photocounts, hist_sigma, max_phi_unc = 0.3, phi0 = 1.1, 
+def get_hist_fit_single_photocountssum(fotkor, t_res, t_measure, background_photocounts, max_phi_unc = 0.3, phi0 = 1.1, 
                  voltages=np.array([[1,1], [1,1]])):
     # function returns DeltaS_S_ratio, Delta_S_S_ratio_sigma, fot_phi, fot_phi_sigma, hist_sigma
 
@@ -471,6 +471,8 @@ def get_hist_fit_single_photocountssum(fotkor, t_res, t_measure, background_phot
     fotkor[fotkor_shape[0] - 2] = fotkor[fotkor_shape[0] - 2] - bg_ph_per_bin * last_bin_ratio
     #-----------------------------
     photon_sum = np.sum(fotkor, axis=0)
+    # hist sigma
+    hist_sigma = np.std(fotkor[:-2], axis=0)
     
     #------- odhad RF frekvence i s nejistotou
     # odhad periody triggeru
@@ -585,4 +587,4 @@ def get_hist_fit_single_photocountssum(fotkor, t_res, t_measure, background_phot
 #         except:
 #             pass
 
-    return( DeltaS_S_ratio, Delta_S_S_ratio_sigma, photon_sum )
+    return( DeltaS_S_ratio, Delta_S_S_ratio_sigma, photon_sum, hist_sigma )
