@@ -587,3 +587,87 @@ def get_beta_xyz_phi_xyz_Sxy_z_proj(variables):
     return (np.array([np.abs(beta_x_comp), np.abs(beta_y_comp)]),
             np.array([np.angle(beta_x_comp), np.angle(beta_y_comp)])
             )
+
+### prepocet nu na z funkce:
+def get_z_given_nu(nu, delta_z_ax):
+    # funkce vraci axialni polohu iontu 
+    # input: nu, [delta_z_ax_5, delta_z_ax_6]
+    a = 0.000357087248516796 *1e6
+    b = 0.0000614272209845667 *1e6
+    c = 0.000214572720416111 *1e6
+    
+    return( a* nu + b* nu**3 + c *nu**5 + sum(delta_z_ax) * 0.5 )
+
+# funkce vracejici amplitudu rf pole v zavislosti na nu a na ostatnich parametrech
+def E_rf_asym_amp_nu(Vrf, phi, delta_z_ax, nu, f_interp):
+    # Vrf = [Vrf_1, Vrf_3, Vrf_5, Vrf_6] # defaultne mam Vrf24 = 0 => asym drive
+    # phi = [phi_1 = 0, phi_2, phi_56]  # phi_1 = 0 -- volba, dale pak phi_5=phi_6
+    # delta_z_ax - [vychyleni ax_5, vychyleni ax_6]
+    # nu = [] body, ve kterych chci fci vyhodnotit
+    # f_interp = (E_field_rad, E_field_ax5, E_field_ax6) 
+    
+    # out: amplituda E_pole
+    
+    rad_amp = sum( Vrf[0:2] * np.exp(phi[0:2] * 1j ) )
+    ax_5_amp = Vrf[2] * np.exp(phi[2] * 1j )
+    ax_6_amp = Vrf[3] * np.exp(phi[2] * 1j )
+    
+    z = get_z_given_nu(nu, delta_z_ax)
+    E_rf_complex = rad_amp * f_interp[0](z) + ax_5_amp * f_interp[1](z - delta_z_ax[0]) + ax_6_amp * f_interp[2](z - delta_z_ax[1])
+
+    # amplituda a faze
+    return np.abs(E_rf_complex)
+
+# funkce vracejici fazi rf pole v zavislosti na nu a na ostatnich parametrech
+def E_rf_asym_phase_nu(Vrf, phi, delta_z_ax, nu, f_interp):
+    # Vrf = [Vrf_1, Vrf_3, Vrf_5, Vrf_6] # defaultne mam Vrf24 = 0 => asym drive
+    # phi = [phi_1 = 0, phi_2, phi_56]  # phi_1 = 0 -- volba, dale pak phi_5=phi_6
+    # delta_z_ax - [vychyleni ax_5, vychyleni ax_6]
+    # nu = [] body, ve kterych chci fci vyhodnotit
+    # f_interp = (E_field_rad, E_field_ax5, E_field_ax6) 
+    
+    # out: amplituda E_pole
+    
+    rad_amp = sum( Vrf[0:2] * np.exp(phi[0:2] * 1j ) )
+    ax_5_amp = Vrf[2] * np.exp(phi[2] * 1j )
+    ax_6_amp = Vrf[3] * np.exp(phi[2] * 1j )
+    
+    z = get_z_given_nu(nu, delta_z_ax)
+    E_rf_complex = rad_amp * f_interp[0](z) + ax_5_amp * f_interp[1](z - delta_z_ax[0]) + ax_6_amp * f_interp[2](z - delta_z_ax[1])
+
+    # amplituda a faze
+    return np.angle( E_rf_complex )
+
+def get_axial_EMM_fit_minim_alg(nu, E_rf, E_rf_sigma, E_field_rad_jedna, E_field_ax_5, E_field_ax_6):
+    from scipy.optimize import least_squares
+
+    #--------------
+    def fit_resid_E_amp_weight(x, nu_data, E_amp_data, weight):
+        Vrf_5 = 0.84*x[2]
+        Vrf_6 = x[2]
+
+        Vrf = [x[0], x[0], Vrf_5, Vrf_6]
+
+        # fixni parametry
+        phi_2 = 0
+        phi_56 = x[1]
+
+        phi = np.array( [0, phi_2, phi_56] )
+        
+        delta_z_ax = [-4.34665041e+01, -2.28337142e+01 ]
+    
+    
+        return( np.sqrt(weight)* (E_rf_asym_amp_nu(Vrf, phi, delta_z_ax,nu_data,(E_field_rad_jedna , E_field_ax_5, E_field_ax_6) ) - E_amp_data) )
+    #------------------
+    x0 = np.array( [200, 0.1, 1] )
+
+    bbounds = ([0, 0, 0],[900, 2*np.pi, 100] )
+
+    fit = least_squares(fit_resid_E_amp_weight, x0, args=(nu, E_rf, 1/E_rf_sigma**2) , ftol=1e-10, xtol=1e-10,
+                       bounds=bbounds)
+    # nejistoty
+    jac = fit.jac
+    C = np.linalg.inv( np.transpose(jac) @ np.diag(1/E_rf_sigma**2) @ jac )
+    sigmas_params = np.sqrt( np.diagonal(C) )
+    
+    return(fit.x, sigmas_params)
